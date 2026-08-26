@@ -1,0 +1,1213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7f4ed">
+<title>Plasgain Pipe Load Planner</title>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js"></script>
+<style>
+:root{--bg:#f5f1e8;--card:#fffdf8;--ink:#1c2636;--muted:#727b89;--line:#d8d2c7;--orange:#e86f3a;--teal:#447c76;--soft:#f3efe6;--warn:#fff6dc;--danger:#b42318}*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:linear-gradient(#e9efe8 0,#f5f1e8 220px);color:var(--ink)}.wrap{max-width:860px;margin:auto;padding:18px 14px 50px}.hero{padding:22px 8px 12px}.hero h1{margin:0;font-size:29px;line-height:1.05}.hero p{margin:7px 0;color:var(--muted)}.card{background:rgba(255,253,248,.96);border:1px solid var(--line);border-radius:20px;padding:18px;margin:14px 0;box-shadow:0 4px 18px rgba(28,38,54,.05)}.kicker{font:600 12px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--teal)}h2{font-size:25px;margin:9px 0 8px}.sub{color:var(--muted);line-height:1.4;font-size:14px}.qty-grid{display:grid;grid-template-columns:1fr;gap:9px}@media(min-width:620px){.qty-grid{grid-template-columns:1fr 1fr}}.qty-card{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:15px;padding:12px 14px;background:#fbf8f2}.qty-card strong{font-size:21px}.qty-card small{display:block;color:var(--muted);font-size:11px;margin-top:4px}.qty-card input{width:96px;height:52px;border:1px solid #c9c2b7;border-radius:12px;background:#fffdf8;text-align:right;padding:8px 12px;font-size:23px;color:var(--ink)}.btn{width:100%;margin-top:14px;min-height:56px;border:0;border-radius:14px;background:var(--orange);color:white;font-size:18px;font-weight:800;box-shadow:0 5px 0 #c85224}.btn:disabled{opacity:.55}.status{display:none;align-items:center;gap:10px;margin-top:12px;color:var(--teal);font-weight:700}.spin{width:18px;height:18px;border:2px solid #c7d8d5;border-top-color:var(--teal);border-radius:50%;animation:s 1s linear infinite}@keyframes s{to{transform:rotate(360deg)}}.metrics{display:grid;grid-template-columns:1fr 1fr;gap:12px}.metric{padding:12px;border-left:3px solid #ded8cd}.metric label{display:block;font:600 11px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.15em;color:var(--muted);text-transform:uppercase}.metric b{display:block;font-size:31px;margin-top:5px}.orange{color:var(--orange)}.teal{color:var(--teal)}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 7px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}th{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}.pattern{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #ebe6dd}.count{font:700 13px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--orange);width:42px}.chip{display:inline-block;border:1px solid #b8cbc7;background:#eef5f3;color:#3f706b;border-radius:8px;padding:5px 7px;font:500 12px ui-monospace,SFMono-Regular,Menlo,monospace}.arrow{color:#8a929e;margin:0 4px}.fleet-option{display:block;margin:9px 0;cursor:pointer}.fleet-option input{display:none}.fleet-box{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);border-radius:14px;padding:14px;background:#faf7f1}.fleet-option input:checked+.fleet-box{border-color:#f2a17e;background:#fff4ee;box-shadow:inset 0 0 0 1px #f2a17e}.fleet-main b{display:block;font-size:16px}.fleet-main small{display:block;margin-top:4px;color:var(--muted)}.fleet-spare{font:600 12px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}.truck{border:1px solid var(--line);border-radius:17px;padding:13px;margin:12px 0;background:#faf8f3}.truck-head{display:flex;justify-content:space-between;align-items:center}.truck-head h3{margin:0;font-size:18px}.badge{display:inline-block;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:800;background:#eaf5f1;color:#356a64}.bay{border:1px solid #ddd7cc;border-radius:14px;padding:12px;margin:11px 0;background:#fff}.bay-head{display:flex;justify-content:space-between;font-size:13px}.layer{margin:10px 0}.layer-meta{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:4px}.layer-track{display:flex;width:100%;min-height:58px;border:1px dashed #c8c2b9;border-radius:10px;overflow:hidden;background:white;align-items:stretch}.pkg{min-width:54px;padding:7px 5px;border-right:1px solid #d8d3ca;display:flex;flex-direction:column;justify-content:center;overflow:hidden;background:#eef3f0}.pkg.bundle{background:#fff0e6}.pkg b{font-size:11px;white-space:nowrap}.pkg small{font-size:9px;color:var(--muted);white-space:nowrap}.empty-bay{border:1px dashed #c8c2b9;border-radius:14px;padding:22px;text-align:center;color:var(--muted)}details{border-top:1px solid var(--line);margin-top:10px;padding-top:8px}summary{cursor:pointer;font-weight:700;font-size:13px}.chain-line{font:500 11px ui-monospace,SFMono-Regular,Menlo,monospace;margin:5px 0;color:#486f6b}.warning{background:var(--warn);font-size:13px;line-height:1.45}.error{background:#fff1f0;color:var(--danger);border-color:#f0b4ae;font-weight:700}.hide{display:none}.footer{font-size:11px;color:var(--muted);text-align:center;padding:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero"><h1>Plasgain Pipe Load Planner</h1><p>v0.6 · runs in your browser · no Replit server</p></div>
+
+  <div class="card">
+    <div class="kicker">01 / Order input</div><h2>Pipe quantities</h2>
+    <p class="sub">Nests aggressively, then rebuilds remaining outer pipes into full standard packs. Only true remainders stay loose.</p>
+    <div id="qtyGrid" class="qty-grid"></div>
+    <button id="calcBtn" class="btn" disabled>Loading optimiser…</button>
+    <div id="status" class="status"><span class="spin"></span><span id="statusText">Starting Python engine…</span></div>
+  </div>
+
+  <div id="errorBox" class="card error hide"></div>
+  <div id="results" class="hide">
+    <div class="card"><div class="kicker">02 / Result</div><h2>Capacity plan calculated</h2><div id="metrics" class="metrics"></div><p id="comparison" class="sub"></p></div>
+    <div class="card"><div class="kicker">03 / Packs after nesting</div><h2>What sits on the truck</h2><div class="table-wrap"><table><thead><tr><th>Size</th><th>Order</th><th>Nested</th><th>Outer roots</th><th>Full packs</th><th>Loose</th></tr></thead><tbody id="packBody"></tbody></table></div></div>
+    <div class="card"><div class="kicker">04 / Nesting patterns</div><h2>Repeated nest chains</h2><div id="patterns"></div></div>
+    <div class="card"><div class="kicker">05 / Fleet options</div><h2>Choose a fleet</h2><p class="sub">Capacity options only until carrier rates are added. Tap one to rearrange the load plan.</p><div id="fleetOptions"></div></div>
+    <div class="card"><div class="kicker">06 / Load map</div><h2>Selected fleet load plan</h2><div id="truckPlan"></div></div>
+    <div class="card warning"><b>Prototype:</b> loose pipe is now blocked from floor-level placement and 600 packs are limited to three-high by the planning geometry. Physical validation, payload/axle rules, restraint/stability checks and historical load validation are still required.</div>
+  </div>
+  <div class="footer">The Python optimisation engine runs in this page using WebAssembly. Internet is needed to load the runtime.</div>
+</div>
+
+<script type="text/plain" id="engine-code">
+"""
+Plasgain Pipe Load Planner v0.6
+==============================
+
+Purpose
+-------
+Prototype deterministic load-planning engine for 6 m Plasdrain pipe.
+
+Primary objective:
+    1) Minimise physical truck/bay requirement.
+    2) Aggressively nest pipe where allowed.
+    3) Re-form every remaining outer/root quantity into full standard packs wherever possible.
+    4) Treat only the true remainder after nesting as loose pipe by default.
+    5) One pipe of a given size per nest/chain only.
+
+Important
+---------
+This is an optimisation prototype, NOT a load-restraint or legal-compliance
+release tool. Physical measurements, loading stability, axle mass, payload,
+restraint, height, route, overhang and site constraints must be validated
+before operational release.
+
+Current modelling assumptions
+-----------------------------
+- Usable truck width: 2500 mm
+- Usable stacked height per 6 m "bay": 3000 mm
+- 14 Tonne = 1 bay
+- Semi = 2 bays
+- B-Double = 3 bays
+- A-Double = 4 bays
+- Bundle dimensions are Plasgain operational planning dimensions.
+- Loose pipe uses published mean OD as provisional width/height.
+- 525 published OD is retained as reference only; nesting compatibility
+  is operationally overridden because 525 is known to fit inside 600.
+- 450 -> 525 nesting is explicitly prohibited.
+- All other smaller -> larger size combinations are allowed.
+- No duplicate size can appear in a single nest because nest chains
+  strictly increase in pipe size.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, asdict
+from collections import Counter, defaultdict
+from typing import Dict, List, Tuple, Optional, Iterable
+import argparse
+import json
+import math
+import random
+
+try:
+    import networkx as nx
+except ImportError as exc:
+    raise SystemExit(
+        "This prototype requires networkx. Install with: pip install networkx"
+    ) from exc
+
+
+# ---------------------------------------------------------------------------
+# MASTER DATA
+# ---------------------------------------------------------------------------
+
+PIPE_MASTER = {
+    225: {
+        "item": "F21000004",
+        "od_mm": 258,
+        "id_mm": 225,
+        "socket_od_mm": 265,
+        "kg_per_m": 4,
+        "bundle_qty": 12,
+        "bundle_width_mm": 1040,
+        "bundle_height_mm": 920,
+    },
+    300: {
+        "item": "F21000005",
+        "od_mm": 343,
+        "id_mm": 300,
+        "socket_od_mm": 355,
+        "kg_per_m": 5,
+        "bundle_qty": 6,
+        "bundle_width_mm": 1060,
+        "bundle_height_mm": 800,
+    },
+    375: {
+        "item": "F21000006",
+        "od_mm": 431,
+        "id_mm": 375,
+        "socket_od_mm": 443,
+        "kg_per_m": 9,
+        "bundle_qty": 4,
+        "bundle_width_mm": 870,
+        "bundle_height_mm": 960,
+    },
+    450: {
+        "item": "F21000007",
+        "od_mm": 515,
+        "id_mm": 450,
+        "socket_od_mm": 536,
+        "kg_per_m": 12,
+        # CORRECTED: 4 per bundle, 2 wide x 2 high
+        "bundle_qty": 4,
+        "bundle_width_mm": 1030,
+        "bundle_height_mm": 1140,
+    },
+    525: {
+        "item": "F21000018",
+        # Published value is provisional for geometry.
+        # It must NOT be used to prohibit 525 -> 600 nesting.
+        "od_mm": 604,
+        "id_mm": 525,
+        "socket_od_mm": 625,
+        "kg_per_m": 17,
+        "bundle_qty": 2,
+        "bundle_width_mm": 1170,
+        "bundle_height_mm": 650,
+    },
+    600: {
+        "item": "F21000019",
+        "od_mm": 686,
+        "id_mm": 600,
+        "socket_od_mm": 714,
+        "kg_per_m": 22,
+        "bundle_qty": 2,
+        "bundle_width_mm": 1350,
+        "bundle_height_mm": 751,  # operational planning height: prevents 4 x 600 packs reaching exactly 3000 mm
+    },
+    750: {
+        "item": "F21000021",
+        "od_mm": 852,
+        "id_mm": 750,
+        "socket_od_mm": 890,
+        "kg_per_m": 32,
+        "bundle_qty": 2,
+        "bundle_width_mm": 1680,
+        "bundle_height_mm": 860,
+    },
+}
+
+TRUCK_WIDTH_MM = 2500
+BAY_HEIGHT_MM = 3000
+
+TRUCK_TYPES = {
+    "14 Tonne": 1,
+    "Semi": 2,
+    "B-Double": 3,
+    "A-Double": 4,
+}
+
+# Explicit operational nesting override.
+# All smaller -> larger combinations are permitted except these.
+PROHIBITED_NESTS = {
+    (450, 525),
+}
+
+
+# ---------------------------------------------------------------------------
+# DATA CLASSES
+# ---------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class PipeUnit:
+    uid: str
+    size: int
+
+
+@dataclass
+class Package:
+    package_id: str
+    size: int
+    kind: str                  # "bundle" or "loose"
+    width_mm: int
+    height_mm: int
+    root_chains: List[List[int]]
+
+    @property
+    def root_pipe_count(self) -> int:
+        return len(self.root_chains)
+
+
+@dataclass
+class Layer:
+    packages: List[Package]
+    width_mm: int
+    height_mm: int
+
+
+@dataclass
+class Bay:
+    layers: List[Layer]
+    used_height_mm: int
+
+
+# ---------------------------------------------------------------------------
+# NESTING ENGINE
+# ---------------------------------------------------------------------------
+
+def nest_allowed(inner_size: int, outer_size: int) -> bool:
+    """Operational compatibility is authoritative, not published OD/ID maths."""
+    return (
+        inner_size < outer_size
+        and (inner_size, outer_size) not in PROHIBITED_NESTS
+    )
+
+
+def _expand_order(order: Dict[int, int]) -> List[PipeUnit]:
+    units: List[PipeUnit] = []
+    for size in sorted(order):
+        if size not in PIPE_MASTER:
+            raise ValueError(f"Unknown pipe size: {size}")
+        qty = int(order[size])
+        if qty < 0:
+            raise ValueError(f"Quantity cannot be negative: {size}={qty}")
+        for i in range(1, qty + 1):
+            units.append(PipeUnit(uid=f"{size}-{i:04d}", size=size))
+    return units
+
+
+def build_nested_chains(
+    order: Dict[int, int],
+    nesting_enabled: bool = True,
+) -> List[List[PipeUnit]]:
+    """
+    Find a maximum-cardinality path cover of the pipe units.
+
+    Each match means one pipe is physically nested inside one larger pipe.
+    A unit may simultaneously contain one smaller pipe and sit inside one
+    larger pipe, which creates recursive chains.
+
+    Objective:
+    - maximise number of nested units first
+    - when several maximum-cardinality solutions exist, favour hiding larger
+      child pipe sizes because removing a larger root generally saves more
+      freight space
+    """
+    units = _expand_order(order)
+
+    if not nesting_enabled or not units:
+        return [[u] for u in units]
+
+    graph = nx.Graph()
+
+    left_nodes = [("child", u.uid) for u in units]
+    right_nodes = [("parent", u.uid) for u in units]
+
+    unit_by_uid = {u.uid: u for u in units}
+    graph.add_nodes_from(left_nodes, bipartite=0)
+    graph.add_nodes_from(right_nodes, bipartite=1)
+
+    # A large child is more valuable to hide than a small child.
+    # maxcardinality=True still makes count of nested pipes the first objective.
+    for child in units:
+        for parent in units:
+            if nest_allowed(child.size, parent.size):
+                weight = child.size ** 2
+                graph.add_edge(
+                    ("child", child.uid),
+                    ("parent", parent.uid),
+                    weight=weight,
+                )
+
+    matching = nx.algorithms.matching.max_weight_matching(
+        graph,
+        maxcardinality=True,
+        weight="weight",
+    )
+
+    parent_of: Dict[str, str] = {}
+    child_of: Dict[str, str] = {}
+
+    for a, b in matching:
+        if a[0] == "parent":
+            a, b = b, a
+
+        child_uid = a[1]
+        parent_uid = b[1]
+        parent_of[child_uid] = parent_uid
+        child_of[parent_uid] = child_uid
+
+    roots = [u for u in units if u.uid not in parent_of]
+
+    # Largest roots first for more intuitive load-plan output.
+    roots.sort(key=lambda u: (u.size, u.uid), reverse=True)
+
+    chains: List[List[PipeUnit]] = []
+    for root in roots:
+        chain = [root]
+        current_uid = root.uid
+
+        while current_uid in child_of:
+            current_uid = child_of[current_uid]
+            chain.append(unit_by_uid[current_uid])
+
+        chains.append(chain)
+
+    return chains
+
+
+# ---------------------------------------------------------------------------
+# PACKAGE / BUNDLE ENGINE
+# ---------------------------------------------------------------------------
+
+def _chain_sizes(chain: List[PipeUnit]) -> List[int]:
+    return [u.size for u in chain]
+
+
+def package_chains(
+    chains: List[List[PipeUnit]],
+    retained_bundle_counts: Optional[Dict[int, int]] = None,
+) -> Tuple[List[Package], Dict[int, int], Dict[int, int]]:
+    """
+    Group OUTER/ROOT pipes back into standard bundles.
+
+    Inner nested pipes do not consume extra truck footprint.
+
+    retained_bundle_counts:
+        number of full root bundles to keep for each size.
+        Any remaining root pipes are treated as loose.
+    """
+    by_root_size: Dict[int, List[List[PipeUnit]]] = defaultdict(list)
+    for chain in chains:
+        by_root_size[chain[0].size].append(chain)
+
+    packages: List[Package] = []
+    full_bundles_possible: Dict[int, int] = {}
+    bundles_retained: Dict[int, int] = {}
+
+    for size in sorted(by_root_size, reverse=True):
+        size_chains = by_root_size[size]
+        master = PIPE_MASTER[size]
+        bundle_qty = master["bundle_qty"]
+
+        max_full_bundles = len(size_chains) // bundle_qty
+        full_bundles_possible[size] = max_full_bundles
+
+        if retained_bundle_counts is None:
+            retain = max_full_bundles
+        else:
+            retain = max(
+                0,
+                min(
+                    max_full_bundles,
+                    int(retained_bundle_counts.get(size, max_full_bundles)),
+                ),
+            )
+
+        bundles_retained[size] = retain
+
+        cursor = 0
+
+        for bundle_no in range(1, retain + 1):
+            group = size_chains[cursor: cursor + bundle_qty]
+            cursor += bundle_qty
+
+            packages.append(
+                Package(
+                    package_id=f"{size}-B{bundle_no:03d}",
+                    size=size,
+                    kind="bundle",
+                    width_mm=master["bundle_width_mm"],
+                    height_mm=master["bundle_height_mm"],
+                    root_chains=[_chain_sizes(c) for c in group],
+                )
+            )
+
+        loose_no = 1
+        for chain in size_chains[cursor:]:
+            packages.append(
+                Package(
+                    package_id=f"{size}-L{loose_no:03d}",
+                    size=size,
+                    kind="loose",
+                    # Provisional until physical measurements are confirmed.
+                    width_mm=master["od_mm"],
+                    height_mm=master["od_mm"],
+                    root_chains=[_chain_sizes(chain)],
+                )
+            )
+            loose_no += 1
+
+    return packages, full_bundles_possible, bundles_retained
+
+
+# ---------------------------------------------------------------------------
+# BAY PACKING ENGINE - V0.1 HEURISTIC
+# ---------------------------------------------------------------------------
+
+def _sort_packages(packages: List[Package], mode: str) -> List[Package]:
+    if mode == "height":
+        return sorted(
+            packages,
+            key=lambda p: (p.height_mm, p.width_mm, p.size),
+            reverse=True,
+        )
+    if mode == "width":
+        return sorted(
+            packages,
+            key=lambda p: (p.width_mm, p.height_mm, p.size),
+            reverse=True,
+        )
+    if mode == "area":
+        return sorted(
+            packages,
+            key=lambda p: (p.width_mm * p.height_mm, p.height_mm),
+            reverse=True,
+        )
+    if mode == "size":
+        return sorted(packages, key=lambda p: (p.size, p.height_mm), reverse=True)
+
+    raise ValueError(f"Unknown sort mode: {mode}")
+
+
+def _build_layers(packages: List[Package], mode: str) -> List[Layer]:
+    """
+    Build horizontal layers from the supplied packages.
+
+    v0.6 calls this for FULL BUNDLES only. Loose pipe is positioned afterwards
+    so it can never become a floor-level package.
+    """
+    layers: List[Layer] = []
+
+    for package in _sort_packages(packages, mode):
+        best_index = None
+        best_score = None
+
+        for i, layer in enumerate(layers):
+            if layer.width_mm + package.width_mm > TRUCK_WIDTH_MM:
+                continue
+
+            new_height = max(layer.height_mm, package.height_mm)
+            height_increase = new_height - layer.height_mm
+            width_remaining = TRUCK_WIDTH_MM - (layer.width_mm + package.width_mm)
+
+            score = (height_increase, width_remaining)
+
+            if best_score is None or score < best_score:
+                best_score = score
+                best_index = i
+
+        if best_index is None:
+            layers.append(
+                Layer(
+                    packages=[package],
+                    width_mm=package.width_mm,
+                    height_mm=package.height_mm,
+                )
+            )
+        else:
+            layer = layers[best_index]
+            layer.packages.append(package)
+            layer.width_mm += package.width_mm
+            layer.height_mm = max(layer.height_mm, package.height_mm)
+
+    return layers
+
+
+def _pack_layers_into_bays(layers: List[Layer]) -> List[Bay]:
+    """
+    Pack FULL-BUNDLE layers into 3000 mm bays.
+
+    Every resulting bay therefore starts with a full-bundle foundation.
+    Loose pipe is added only after this step.
+    """
+    bays: List[Bay] = []
+
+    for layer in sorted(layers, key=lambda x: x.height_mm, reverse=True):
+        best_index = None
+        best_remaining = None
+
+        for i, bay in enumerate(bays):
+            new_height = bay.used_height_mm + layer.height_mm
+            if new_height <= BAY_HEIGHT_MM:
+                remaining = BAY_HEIGHT_MM - new_height
+                if best_remaining is None or remaining < best_remaining:
+                    best_remaining = remaining
+                    best_index = i
+
+        if best_index is None:
+            bays.append(Bay(layers=[layer], used_height_mm=layer.height_mm))
+        else:
+            bay = bays[best_index]
+            bay.layers.append(layer)
+            bay.used_height_mm += layer.height_mm
+
+    return bays
+
+
+def _layer_is_bundle_only(layer: Layer) -> bool:
+    return all(p.kind == "bundle" for p in layer.packages)
+
+
+def _place_loose_packages(
+    bays: List[Bay],
+    loose_packages: List[Package],
+    mode: str,
+) -> bool:
+    """
+    Place loose outer pipes only ABOVE a full-bundle foundation.
+
+    Operational rule:
+      - Layer 1 / trailer floor may contain bundles only.
+      - A loose pipe may share an upper layer with bundles/loose pipe.
+      - A new loose layer may be created only in a bay that already has a
+        bundle foundation below it.
+      - If necessary, an upper bundle-only layer can be moved into a new bay
+        to create another supported bay for loose pipe.
+    """
+    if not loose_packages:
+        return True
+
+    if not bays:
+        return False
+
+    for package in _sort_packages(loose_packages, mode):
+        best = None
+
+        # 1) Use spare width on an existing UPPER layer.
+        for bi, bay in enumerate(bays):
+            for li, layer in enumerate(bay.layers):
+                if li == 0:
+                    continue
+                if layer.width_mm + package.width_mm > TRUCK_WIDTH_MM:
+                    continue
+
+                new_layer_height = max(layer.height_mm, package.height_mm)
+                height_increase = new_layer_height - layer.height_mm
+                if bay.used_height_mm + height_increase > BAY_HEIGHT_MM:
+                    continue
+
+                width_remaining = TRUCK_WIDTH_MM - (layer.width_mm + package.width_mm)
+                score = (0, height_increase, width_remaining, bay.used_height_mm)
+
+                if best is None or score < best[0]:
+                    best = (score, "existing", bi, li)
+
+        # 2) Add a new upper layer above the bundle foundation.
+        for bi, bay in enumerate(bays):
+            if not bay.layers or not _layer_is_bundle_only(bay.layers[0]):
+                continue
+            if bay.used_height_mm + package.height_mm > BAY_HEIGHT_MM:
+                continue
+
+            remaining = BAY_HEIGHT_MM - (bay.used_height_mm + package.height_mm)
+            score = (1, 0, remaining, bay.used_height_mm)
+
+            if best is None or score < best[0]:
+                best = (score, "new_layer", bi, None)
+
+        if best is not None:
+            _, action, bi, li = best
+            bay = bays[bi]
+
+            if action == "existing":
+                layer = bay.layers[li]
+                old_height = layer.height_mm
+                layer.packages.append(package)
+                layer.width_mm += package.width_mm
+                layer.height_mm = max(layer.height_mm, package.height_mm)
+                bay.used_height_mm += layer.height_mm - old_height
+            else:
+                bay.layers.append(
+                    Layer(
+                        packages=[package],
+                        width_mm=package.width_mm,
+                        height_mm=package.height_mm,
+                    )
+                )
+                bay.used_height_mm += package.height_mm
+
+            continue
+
+        # 3) Need another supported bay. Move an upper bundle-only layer out
+        # of an existing bay to become the floor/foundation of a new bay.
+        move = None
+        for bi, bay in enumerate(bays):
+            if len(bay.layers) <= 1:
+                continue
+
+            for li in range(1, len(bay.layers)):
+                layer = bay.layers[li]
+                if not _layer_is_bundle_only(layer):
+                    continue
+                if layer.height_mm + package.height_mm > BAY_HEIGHT_MM:
+                    continue
+
+                score = (
+                    layer.height_mm + package.height_mm,
+                    layer.height_mm,
+                    -layer.width_mm,
+                )
+
+                if move is None or score < move[0]:
+                    move = (score, bi, li)
+
+        if move is None:
+            return False
+
+        _, bi, li = move
+        source = bays[bi]
+        foundation = source.layers.pop(li)
+        source.used_height_mm -= foundation.height_mm
+
+        new_bay = Bay(
+            layers=[
+                foundation,
+                Layer(
+                    packages=[package],
+                    width_mm=package.width_mm,
+                    height_mm=package.height_mm,
+                ),
+            ],
+            used_height_mm=foundation.height_mm + package.height_mm,
+        )
+        bays.append(new_bay)
+
+    # Defensive validation.
+    for bay in bays:
+        if not bay.layers or any(p.kind == "loose" for p in bay.layers[0].packages):
+            return False
+        if bay.used_height_mm > BAY_HEIGHT_MM:
+            return False
+
+    return True
+
+
+def pack_packages(packages: List[Package]) -> Tuple[List[Bay], str]:
+    """
+    v0.6 packing sequence:
+      1) Form and pack full-bundle layers.
+      2) Use those bundles as trailer-floor foundations.
+      3) Place loose remainder pipe only on upper supported layers.
+      4) Try several deterministic sort modes and keep the smallest valid plan.
+    """
+    if not packages:
+        return [], "empty"
+
+    bundle_packages = [p for p in packages if p.kind == "bundle"]
+    loose_packages = [p for p in packages if p.kind == "loose"]
+
+    if loose_packages and not bundle_packages:
+        raise ValueError(
+            "This order leaves only loose outer pipe. Current Plasgain rule "
+            "requires loose pipe to sit above a full bundle, not directly on "
+            "the trailer floor."
+        )
+
+    candidates = []
+
+    for mode in ("height", "width", "area", "size"):
+        layers = _build_layers(bundle_packages, mode)
+        bays = _pack_layers_into_bays(layers)
+
+        if not _place_loose_packages(bays, loose_packages, mode):
+            continue
+
+        unused_height = sum(BAY_HEIGHT_MM - b.used_height_mm for b in bays)
+        total_layers = sum(len(b.layers) for b in bays)
+
+        candidates.append(
+            (
+                len(bays),
+                unused_height,
+                total_layers,
+                mode,
+                bays,
+            )
+        )
+
+    if not candidates:
+        raise ValueError(
+            "No supported load plan was found. Loose pipe cannot be placed "
+            "directly on the trailer floor under the current operating rule."
+        )
+
+    best = min(candidates, key=lambda x: (x[0], x[1], x[2]))
+    return best[4], best[3]
+
+
+# ---------------------------------------------------------------------------
+# BUNDLE-BREAK SEARCH
+# ---------------------------------------------------------------------------
+
+def _broken_bundle_count(
+    possible: Dict[int, int],
+    retained: Dict[int, int],
+) -> int:
+    return sum(
+        possible.get(size, 0) - retained.get(size, 0)
+        for size in possible
+    )
+
+
+def _state_key(retained: Dict[int, int], sizes: Iterable[int]) -> Tuple[int, ...]:
+    return tuple(retained.get(s, 0) for s in sizes)
+
+
+def optimise_bundle_breaking(
+    chains: List[List[PipeUnit]],
+    beam_width: int = 80,
+    max_steps: int = 80,
+) -> Tuple[List[Package], List[Bay], Dict[int, int], Dict[int, int], str]:
+    """
+    Freight-first local/beam search.
+
+    Starts with every possible full root bundle retained.
+    It is then allowed to break bundles. Search objective is lexicographic:
+
+        1) fewest bays
+        2) fewest broken bundles
+        3) least unused vertical bay capacity
+
+    The v0.1 packer is heuristic, so this search should be validated against
+    known physical loads before operational use.
+    """
+    _, possible, maximum_retained = package_chains(chains)
+    sizes = sorted(possible)
+
+    def evaluate(retained: Dict[int, int]):
+        packages, _, retained_actual = package_chains(chains, retained)
+        bays, mode = pack_packages(packages)
+        broken = _broken_bundle_count(possible, retained_actual)
+        unused = sum(BAY_HEIGHT_MM - b.used_height_mm for b in bays)
+        return (
+            len(bays),
+            broken,
+            unused,
+            packages,
+            bays,
+            retained_actual,
+            mode,
+        )
+
+    initial = dict(maximum_retained)
+    best_eval = evaluate(initial)
+    best_state = initial
+
+    # Also evaluate the freight-minimising extreme: all root pipes loose.
+    all_loose = {s: 0 for s in sizes}
+    loose_eval = evaluate(all_loose)
+    if loose_eval[:3] < best_eval[:3]:
+        best_eval = loose_eval
+        best_state = all_loose
+
+    frontier = [initial]
+    seen = {_state_key(initial, sizes)}
+
+    for _ in range(max_steps):
+        neighbours = []
+
+        for state in frontier:
+            for size in sizes:
+                if state.get(size, 0) <= 0:
+                    continue
+
+                next_state = dict(state)
+                next_state[size] -= 1
+                key = _state_key(next_state, sizes)
+
+                if key in seen:
+                    continue
+
+                seen.add(key)
+                ev = evaluate(next_state)
+                neighbours.append((ev[:3], next_state, ev))
+
+                if ev[:3] < best_eval[:3]:
+                    best_eval = ev
+                    best_state = next_state
+
+        if not neighbours:
+            break
+
+        # Keep states with strong freight outcomes, but maintain enough width
+        # to pass through temporary bundle-breaking states.
+        neighbours.sort(key=lambda x: x[0])
+        frontier = [state for _, state, _ in neighbours[:beam_width]]
+
+        # Stop if every bundle has been broken.
+        if all(all(s.get(size, 0) == 0 for size in sizes) for s in frontier):
+            break
+
+    # Re-evaluate the selected best state to keep return values consistent.
+    best_eval = evaluate(best_state)
+
+    return (
+        best_eval[3],  # packages
+        best_eval[4],  # bays
+        possible,
+        best_eval[5],  # retained
+        best_eval[6],  # packing mode
+    )
+
+
+# ---------------------------------------------------------------------------
+# REPORTING / TRUCK LOGIC
+# ---------------------------------------------------------------------------
+
+def _truck_for_single_load(bays_required: int) -> Optional[str]:
+    for truck, bays in TRUCK_TYPES.items():
+        if bays_required <= bays:
+            return truck
+    return None
+
+
+def _candidate_fleet_mixes(bays_required: int, limit: int = 10) -> List[Dict]:
+    """
+    Enumerate practical capacity combinations.
+
+    No rate table exists yet, so for multi-truck loads this does NOT claim
+    which mix is cheapest. It sorts by:
+        1) least unused bay capacity
+        2) fewest trucks
+    """
+    if bays_required <= 0:
+        return []
+
+    types = list(TRUCK_TYPES.items())
+    max_trucks = math.ceil(bays_required / min(TRUCK_TYPES.values())) + 1
+    candidates = []
+
+    def recurse(index: int, remaining_slots: int, counts: Dict[str, int]):
+        if index == len(types):
+            capacity = sum(TRUCK_TYPES[t] * c for t, c in counts.items())
+            if capacity >= bays_required:
+                trucks = sum(counts.values())
+                candidates.append(
+                    {
+                        "mix": {t: c for t, c in counts.items() if c},
+                        "capacity_bays": capacity,
+                        "unused_bays": capacity - bays_required,
+                        "truck_count": trucks,
+                    }
+                )
+            return
+
+        truck, _ = types[index]
+        for count in range(remaining_slots + 1):
+            counts[truck] = count
+            recurse(index + 1, remaining_slots - count, counts)
+        counts.pop(truck, None)
+
+    recurse(0, max_trucks, {})
+
+    # Remove dominated duplicates and sort.
+    unique = {}
+    for c in candidates:
+        key = tuple(sorted(c["mix"].items()))
+        unique[key] = c
+
+    result = sorted(
+        unique.values(),
+        key=lambda x: (x["unused_bays"], x["truck_count"]),
+    )
+
+    return result[:limit]
+
+
+def _total_weight_kg(order: Dict[int, int]) -> float:
+    # Current source supplies approx kg per metre. Use nominal 6 m length.
+    return sum(
+        qty * PIPE_MASTER[size]["kg_per_m"] * 6
+        for size, qty in order.items()
+    )
+
+
+def _serialize_bays(bays: List[Bay]) -> List[Dict]:
+    output = []
+
+    for bay_no, bay in enumerate(bays, start=1):
+        layers_out = []
+
+        for layer_no, layer in enumerate(bay.layers, start=1):
+            layers_out.append(
+                {
+                    "layer": layer_no,
+                    "width_mm": layer.width_mm,
+                    "height_mm": layer.height_mm,
+                    "packages": [
+                        {
+                            "package_id": p.package_id,
+                            "size": p.size,
+                            "kind": p.kind,
+                            "root_pipe_count": p.root_pipe_count,
+                            "quantity": p.root_pipe_count,
+                            "width_mm": p.width_mm,
+                            "height_mm": p.height_mm,
+                            "nested_chains": p.root_chains,
+                        }
+                        for p in layer.packages
+                    ],
+                }
+            )
+
+        output.append(
+            {
+                "bay": bay_no,
+                "used_height_mm": bay.used_height_mm,
+                "remaining_height_mm": BAY_HEIGHT_MM - bay.used_height_mm,
+                "layers": layers_out,
+            }
+        )
+
+    return output
+
+
+def plan_order(
+    order: Dict[int, int],
+    nesting_enabled: bool = True,
+    optimise_bundles: bool = False,
+) -> Dict:
+    """
+    Main function intended to become the API/Azure Function entry point later.
+    """
+    clean_order = {
+        int(size): int(qty)
+        for size, qty in order.items()
+        if int(qty) > 0
+    }
+
+    chains = build_nested_chains(
+        clean_order,
+        nesting_enabled=nesting_enabled,
+    )
+
+    if optimise_bundles:
+        packages, bays, possible, retained, packing_mode = optimise_bundle_breaking(
+            chains
+        )
+    else:
+        packages, possible, retained = package_chains(chains)
+        bays, packing_mode = pack_packages(packages)
+
+    total_pipes = sum(clean_order.values())
+    root_pipes = len(chains)
+    nested_pipes = total_pipes - root_pipes
+    broken_bundles = _broken_bundle_count(possible, retained)
+    bays_required = len(bays)
+
+    single_truck = _truck_for_single_load(bays_required)
+    fleet_options = _candidate_fleet_mixes(bays_required)
+
+    root_count_by_size = Counter(chain[0].size for chain in chains)
+
+    nesting_summary = Counter()
+    for chain in chains:
+        sizes = _chain_sizes(chain)
+        for inner, outer in zip(reversed(sizes[1:]), reversed(sizes[:-1])):
+            # For reporting only; chain is OUTER -> INNER.
+            pass
+
+    result = {
+        "engine_version": "0.6",
+        "status": "PROTOTYPE - PHYSICAL VALIDATION REQUIRED",
+        "input_order": dict(sorted(clean_order.items())),
+        "summary": {
+            "total_pipes": total_pipes,
+            "root_pipes_after_nesting": root_pipes,
+            "nested_pipes": nested_pipes,
+            "nesting_rate_pct": round(
+                (nested_pipes / total_pipes * 100) if total_pipes else 0,
+                1,
+            ),
+            "estimated_pipe_mass_kg": round(_total_weight_kg(clean_order), 1),
+            "bays_required": bays_required,
+            "single_truck_if_one_load": single_truck,
+            "full_root_bundles_possible": possible,
+            "full_root_bundles_retained": retained,
+            "bundles_broken_for_freight": broken_bundles,
+            "packing_mode": packing_mode,
+        },
+        "root_pipe_count_by_size": dict(sorted(root_count_by_size.items())),
+        "nested_chains": [
+            _chain_sizes(chain)
+            for chain in chains
+        ],
+        "load_plan": _serialize_bays(bays),
+        "fleet_options_without_rates": fleet_options,
+        "warnings": [
+            "This is not yet a legal/load-restraint release calculation.",
+            "Loose-pipe width/height currently uses published mean OD and needs physical validation.",
+            "525 published OD is not authoritative for nesting; 525 -> 600 is explicitly allowed.",
+            "450 -> 525 is explicitly prohibited.",
+            "Payload and axle limits are not enforced until truck payload data is supplied.",
+            "Multi-truck recommendation requires freight rates before the cheapest mix can be selected.",
+            "v0.6 prevents loose pipe from being placed on the trailer floor; loose pipe requires a bundle foundation.",
+            "600 mm bundle planning height is set to 751 mm so no bay can stack four 600 packs.",
+            "v0.6 bay packing uses a multi-start shelf heuristic, not a proven global 2D optimum.",
+        ],
+    }
+
+    return result
+
+
+def compare_nesting(order: Dict[int, int]) -> Dict:
+    non_nested = plan_order(order, nesting_enabled=False, optimise_bundles=False)
+    nested = plan_order(order, nesting_enabled=True, optimise_bundles=False)
+
+    return {
+        "order": dict(sorted(order.items())),
+        "without_nesting": non_nested["summary"],
+        "with_nesting": nested["summary"],
+        "bay_saving": (
+            non_nested["summary"]["bays_required"]
+            - nested["summary"]["bays_required"]
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+def parse_order(text: str) -> Dict[int, int]:
+    """
+    Example:
+        225=31,300=19,375=9,450=10,525=5,600=7
+    """
+    order = {}
+    if not text.strip():
+        return order
+
+    for part in text.split(","):
+        size_text, qty_text = part.split("=")
+        order[int(size_text.strip())] = int(qty_text.strip())
+
+    return order
+
+
+def pretty_summary(result: Dict) -> str:
+    s = result["summary"]
+    lines = [
+        "PLASGAIN PIPE LOAD PLANNER v0.1",
+        "=" * 36,
+        f"Order: {result['input_order']}",
+        f"Total pipes: {s['total_pipes']}",
+        f"Nested pipes: {s['nested_pipes']} ({s['nesting_rate_pct']}%)",
+        f"Outer/root pipes left: {s['root_pipes_after_nesting']}",
+        f"Bay requirement: {s['bays_required']}",
+        f"Single truck: {s['single_truck_if_one_load'] or 'Multiple loads required'}",
+        f"Bundles broken to reduce freight: {s['bundles_broken_for_freight']}",
+        f"Approx pipe mass: {s['estimated_pipe_mass_kg']} kg",
+        "",
+        "Root pipes by size:",
+        json.dumps(result["root_pipe_count_by_size"], indent=2),
+        "",
+        "First 20 nesting chains (outer -> inner):",
+    ]
+
+    for chain in result["nested_chains"][:20]:
+        lines.append("  " + " -> ".join(map(str, chain)))
+
+    if len(result["nested_chains"]) > 20:
+        lines.append(f"  ... {len(result['nested_chains']) - 20} more chains")
+
+    lines.extend(
+        [
+            "",
+            "WARNING: PROTOTYPE ONLY - PHYSICAL VALIDATION REQUIRED.",
+        ]
+    )
+
+    return "\n".join(lines)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--order",
+        help="e.g. 225=31,300=19,375=9,450=10,525=5,600=7",
+    )
+    parser.add_argument(
+        "--compare",
+        action="store_true",
+        help="Compare nested vs non-nested bay requirement",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print full JSON result",
+    )
+    parser.add_argument(
+        "--demo",
+        action="store_true",
+        help="Run built-in demonstration",
+    )
+
+    args = parser.parse_args()
+
+    if args.demo:
+        order = {
+            225: 31,
+            300: 19,
+            375: 9,
+            450: 10,
+            525: 5,
+            600: 7,
+        }
+    elif args.order:
+        order = parse_order(args.order)
+    else:
+        parser.error("Provide --order or --demo")
+
+    if args.compare:
+        print(json.dumps(compare_nesting(order), indent=2))
+        return
+
+    result = plan_order(order)
+
+    if args.json:
+        print(json.dumps(result, indent=2))
+    else:
+        print(pretty_summary(result))
+
+
+# Browser build: command-line entry point intentionally disabled.
+
+</script>
+<script>
+const PIPE_MASTER = {
+  225:{item:'F21000004',od:258,kgm:4,pack:12},300:{item:'F21000005',od:343,kgm:5,pack:6},375:{item:'F21000006',od:431,kgm:9,pack:4},450:{item:'F21000007',od:515,kgm:12,pack:4},525:{item:'F21000018',od:604,kgm:17,pack:2},600:{item:'F21000019',od:686,kgm:22,pack:2},750:{item:'F21000021',od:852,kgm:32,pack:2}
+};
+const TRUCK_TYPES={'14 Tonne':1,'Semi':2,'B-Double':3,'A-Double':4};
+const PIPE_SIZES=[225,300,375,450,525,600,750];
+const TRUCK_WIDTH=2500, BAY_HEIGHT=3000;
+let pyodide=null, lastResult=null, lastFleet=[];
+
+function esc(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+function showStatus(msg,on=true){document.getElementById('status').style.display=on?'flex':'none';document.getElementById('statusText').textContent=msg;}
+function showError(msg){const e=document.getElementById('errorBox');e.textContent=msg;e.classList.remove('hide');}
+function clearError(){document.getElementById('errorBox').classList.add('hide');}
+
+function buildInputs(){const g=document.getElementById('qtyGrid');g.innerHTML=''; PIPE_SIZES.forEach(s=>{const m=PIPE_MASTER[s];g.insertAdjacentHTML('beforeend',`<div class="qty-card"><div><strong>${s} <span style="font-size:12px;color:var(--muted)">mm</span></strong><small>${m.item} · pack ${m.pack}</small></div><input id="q${s}" type="number" inputmode="numeric" min="0" step="1" placeholder="0"></div>`)});}
+
+async function init(){
+  buildInputs(); showStatus('Loading browser Python runtime…',true);
+  try{
+    pyodide=await loadPyodide();
+    showStatus('Loading optimiser dependency…',true);
+    await pyodide.loadPackage('micropip');
+    await pyodide.runPythonAsync("import micropip\nawait micropip.install('networkx')");
+    showStatus('Starting Plasgain optimiser…',true);
+    const code=document.getElementById('engine-code').textContent;
+    await pyodide.runPythonAsync(code);
+    await pyodide.runPythonAsync(`\nimport json\ndef _plan_json(order_json, nesting=True):\n    order=json.loads(order_json)\n    return json.dumps(plan_order(order, nesting_enabled=nesting, optimise_bundles=False))\n`);
+    const b=document.getElementById('calcBtn'); b.disabled=false; b.textContent='Calculate load plan'; showStatus('',false);
+  }catch(err){showStatus('',false);showError('Could not start the browser optimiser: '+err);}
+}
+
+function orderFromInputs(){const o={};PIPE_SIZES.forEach(s=>{const v=parseInt(document.getElementById('q'+s).value||'0',10);if(v>0)o[s]=v});return o;}
+function efficientFleetOptions(baysRequired,limit=14){
+  if(baysRequired<=0)return[]; const names=Object.keys(TRUCK_TYPES); const cands=[];
+  function rec(i,counts){
+    if(i===names.length){const truckCount=Object.values(counts).reduce((a,b)=>a+b,0);if(!truckCount||truckCount>baysRequired)return;const cap=names.reduce((a,t)=>a+TRUCK_TYPES[t]*(counts[t]||0),0);if(cap<baysRequired)return;const spare=cap-baysRequired;if(spare>3)return;let trucks=[];Object.entries(TRUCK_TYPES).sort((a,b)=>b[1]-a[1]).forEach(([t,b])=>{for(let k=0;k<(counts[t]||0);k++)trucks.push({type:t,bay_capacity:b})});const parts=names.filter(t=>counts[t]).map(t=>`${counts[t]} × ${t}`);cands.push({label:parts.join(' + '),mix:{...counts},trucks,capacity_bays:cap,unused_bays:spare,truck_count:truckCount,exact:spare===0});return;}
+    const t=names[i]; for(let n=0;n<=baysRequired;n++){counts[t]=n;rec(i+1,counts)} delete counts[t];
+  } rec(0,{});
+  cands.sort((a,b)=>(b.exact-a.exact)||(a.truck_count-b.truck_count)||(a.unused_bays-b.unused_bays)|| (b.capacity_bays-a.capacity_bays));
+  const seen=new Set(),out=[];for(const c of cands){const k=JSON.stringify(c.mix);if(!seen.has(k)){seen.add(k);out.push(c)}if(out.length>=limit)break}return out;
+}
+
+function repeatedPatterns(chains){const m=new Map();chains.filter(c=>c.length>1).forEach(c=>{const k=c.join('>');m.set(k,(m.get(k)||0)+1)});return [...m.entries()].map(([k,count])=>({chain:k.split('>').map(Number),count})).sort((a,b)=>b.count-a.count||b.chain.length-a.chain.length);}
+function render(result,nonNested){
+  lastResult=result; const s=result.summary; const baySaving=nonNested.summary.bays_required-s.bays_required; document.getElementById('results').classList.remove('hide');
+  document.getElementById('metrics').innerHTML=`<div class="metric"><label>Total pipes</label><b class="orange">${s.total_pipes}</b></div><div class="metric"><label>Nested</label><b class="teal">${s.nested_pipes}</b></div><div class="metric"><label>Bays used</label><b>${s.bays_required}</b></div><div class="metric"><label>Bay saving</label><b class="orange">${baySaving}</b></div>`;
+  document.getElementById('comparison').textContent=`Without nesting: ${nonNested.summary.bays_required} bay(s). With nesting: ${s.bays_required} bay(s). Approx pipe mass: ${Math.round(s.estimated_pipe_mass_kg).toLocaleString()} kg.`;
+  const root=result.root_pipe_count_by_size||{};let rows='';PIPE_SIZES.forEach(sz=>{const oq=result.input_order[String(sz)]||result.input_order[sz]||0;if(!oq)return;const r=root[String(sz)]||root[sz]||0;const nested=oq-r;const pack=PIPE_MASTER[sz].pack;rows+=`<tr><td><b>${sz}</b></td><td>${oq}</td><td>${nested}</td><td>${r}</td><td>${Math.floor(r/pack)} × ${pack}</td><td>${r%pack}</td></tr>`});document.getElementById('packBody').innerHTML=rows;
+  const pats=repeatedPatterns(result.nested_chains||[]);document.getElementById('patterns').innerHTML=pats.length?pats.map(p=>`<div class="pattern"><div class="count">${p.count}×</div><div>${p.chain.map((s,i)=>`<span class="chip">${s}</span>${i<p.chain.length-1?'<span class="arrow">→</span>':''}`).join('')}</div></div>`).join(''):'<p class="sub">No nesting required.</p>';
+  lastFleet=efficientFleetOptions(s.bays_required);document.getElementById('fleetOptions').innerHTML=lastFleet.map((o,i)=>`<label class="fleet-option"><input type="radio" name="fleet" value="${i}" ${i===0?'checked':''}><span class="fleet-box"><span class="fleet-main"><b>${esc(o.label)}</b><small>${o.capacity_bays} bay capacity · ${o.truck_count} truck(s)</small></span><span class="fleet-spare">${o.unused_bays} spare</span></span></label>`).join('');document.querySelectorAll('input[name=fleet]').forEach(r=>r.addEventListener('change',e=>renderFleet(Number(e.target.value))));renderFleet(0);
+  setTimeout(()=>document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'}),50);
+}
+function packageHtml(p){const width=Number(p.width_mm||0);const pct=Math.max(10,Math.min(100,(width/TRUCK_WIDTH)*100));const chains=p.nested_chains||[];const nestedQty=chains.reduce((n,ch)=>n+Math.max(0,ch.length-1),0);const qty=Number(p.quantity||p.root_pipe_count||1);const nested=nestedQty>0;const label=p.kind==='bundle'?`${p.size} PACK ×${qty}`:`${p.size} LOOSE ×${qty}`;const detail=`${qty} × ${p.size}${nested?` · +${nestedQty} nested`:''}`;return `<div class="pkg ${p.kind}" style="width:${pct}%"><b>${esc(label)}</b><small>${esc(detail)}</small></div>`;}
+function bayHtml(bay){let h=`<div class="bay"><div class="bay-head"><b>Bay ${bay.bay}</b><span>${bay.used_height_mm.toLocaleString()} / ${BAY_HEIGHT} mm</span></div>`;bay.layers.forEach(l=>{h+=`<div class="layer"><div class="layer-meta"><span>Layer ${l.layer} · ${l.height_mm} mm high</span><span>${l.width_mm} / ${TRUCK_WIDTH} mm wide</span></div><div class="layer-track">`;l.packages.forEach(p=>h+=packageHtml(p));h+='</div></div>'});h+='<details><summary>Show nesting detail</summary>';bay.layers.forEach(l=>l.packages.forEach(p=>{h+=`<div><b>${esc(p.package_id)}</b>`;(p.nested_chains||[]).forEach(ch=>h+=`<div class="chain-line">${ch.join(' → ')}</div>`);h+='</div>'}));return h+'</details></div>';}
+function renderFleet(i){const option=lastFleet[i];if(!option)return;let cursor=0,h='';option.trucks.forEach((t,idx)=>{h+=`<div class="truck"><div class="truck-head"><div><h3>Truck ${idx+1} · ${esc(t.type)}</h3><span class="sub">${t.bay_capacity} bay capacity</span></div><span class="badge">${Math.min(t.bay_capacity,Math.max(0,lastResult.load_plan.length-cursor))} used</span></div>`;for(let s=0;s<t.bay_capacity;s++){h+=cursor<lastResult.load_plan.length?bayHtml(lastResult.load_plan[cursor++]):'<div class="empty-bay">Spare bay capacity</div>'}h+='</div>'});document.getElementById('truckPlan').innerHTML=h;}
+
+document.getElementById('calcBtn').addEventListener('click',async()=>{clearError();const order=orderFromInputs();if(!Object.keys(order).length){showError('Enter at least one pipe quantity.');return}const b=document.getElementById('calcBtn');b.disabled=true;showStatus('Optimising nesting and load plan…',true);try{pyodide.globals.set('order_json',JSON.stringify(order));const rj=await pyodide.runPythonAsync("_plan_json(order_json, True)");const nj=await pyodide.runPythonAsync("_plan_json(order_json, False)");render(JSON.parse(rj),JSON.parse(nj));}catch(err){showError('Calculation failed: '+err)}finally{showStatus('',false);b.disabled=false;}});
+init();
+</script>
+</body></html>
