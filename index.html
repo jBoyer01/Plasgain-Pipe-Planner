@@ -15,11 +15,11 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="hero"><h1>Plasgain Pipe Load Planner</h1><p>v1.3 · supported shelf loading</p></div>
+  <div class="hero"><h1>Plasgain Pipe Load Planner</h1><p>v1.5 · level bases and centred top loading</p></div>
 
   <div id="orderCard" class="card">
     <div class="kicker">01 / Order input</div><h2>Pipe quantities</h2>
-    <p class="sub">Nests into full-pack hosts first. Retains support packs where they reduce the bay requirement; only true remainders stay loose.</p>
+    <p class="sub">Nests into full-pack hosts first. Retains support packs where they reduce the bay requirement; only true remainders stay loose. Prefers low, level bases with loose top rows centred over their support.</p>
     <div id="qtyGrid" class="qty-grid"></div>
     <div class="toggle-row"><div class="toggle-copy"><b>Allow nesting</b><small>Untick to plan the order as full/loose pipe without any pipe-in-pipe nesting.</small></div><label class="switch"><input id="allowNesting" type="checkbox" checked><span class="slider"></span></label></div>
     <button id="calcBtn" class="btn" disabled>Loading optimiser…</button>
@@ -34,15 +34,17 @@
     <div id="fleetCard" class="card"><div class="kicker">05 / Fleet options</div><h2>Choose a fleet</h2><p class="sub">For customer deliveries, 14 Tonne and Semi combinations are ranked first where capacity allows. B-Double and A-Double remain available as lower-preference options. Tap one to rearrange the load plan.</p><div id="fleetOptions"></div></div>
     <div class="card"><div class="kicker">06 / Dispatch brief</div><h2>Loading brief</h2><p class="sub">Uses the fleet option currently selected below. Copy or download the operational text brief, or generate a branded customer-facing PDF/print plan.</p><div class="action-grid"><button id="copyBriefBtn" class="action-btn primary" type="button">Copy loading brief</button><button id="downloadBriefBtn" class="action-btn" type="button">Download .txt</button><button id="printPlanBtn" class="action-btn" type="button">Customer PDF / Print</button></div><div id="briefStatus" class="brief-status"></div></div>
     <div class="card"><div class="kicker">07 / Load map</div><h2>Selected fleet load plan</h2><div id="truckPlan"></div></div>
-    <div class="card warning"><b>Planning assumptions:</b> full packs require a continuous, level pack footprint beneath them. Loose pipe uses exposed pack shelves beside an upper pack, with its full diameter supported and a maximum of two pipes high. Loose 750 may also sit directly on the deck. Loose pipe cannot support full packs or occupy an unsupported gap. The load height limit remains 2,800 mm, with 600 packs limited to three high. Verify actual pack surfaces, loose-pipe outside/socket diameters, dunnage, load restraint, payload and axle distribution before dispatch.</div>
+    <div class="card warning"><b>Planning assumptions:</b> full packs require a continuous, level pack footprint beneath them. The planner favours low, level arrangements and centres the load across the deck. Loose pipe is placed on supported pack tops first, in one row, for strapping to the pack before loading. If it does not fit, supported shelves beside an upper pack allow up to two pipes high. Loose 750 may also use the deck as a fallback. Loose pipe cannot support full packs or occupy an unsupported gap. The load height limit remains 2,800 mm, with 600 packs limited to three high. Verify actual pack surfaces, loose-pipe outside/socket diameters, dunnage, load restraint, payload and axle distribution before dispatch.</div>
   </div>
   <div class="footer">The Python optimisation engine runs in this page using WebAssembly. Internet is needed to load the runtime.</div>
 </div>
 
 <script type="text/plain" id="engine-code">
 
+
+
 """
-Plasgain Pipe Load Planner v1.3
+Plasgain Pipe Load Planner v1.5
 ==============================
 
 Purpose
@@ -867,7 +869,7 @@ def _placement_support(p, placements):
         if p.package.kind == 'bundle':
             return 'full-pack support', supports
         if _shelf_neighbour(p, placements, platform) is None:
-            return None
+            return 'supported top', supports
         return 'shelf beside pack', supports
     if p.package.kind != 'loose':
         return None
@@ -965,7 +967,76 @@ def _loose_positions(package, placements):
                 yield candidate
 
 
-def _place_loose_packages(bays, loose_packages, mode):
+def _loose_layout_penalty(bays):
+    """Prefer single-pipe top rows, then shelves, with loose deck loads last."""
+    off_top = deck = 0
+    for bay in bays:
+        for p in bay.placements:
+            if p.package.kind != 'loose':
+                continue
+            support = _placement_support(p, bay.placements)[0]
+            off_top += support != 'supported top'
+            deck += support == 'deck'
+    return off_top, deck
+
+
+def _centre_bay(bay):
+    """Centre loose top rows on their support, then translate the entire bay.
+
+    Full-pack layers never move independently: their support geometry stays fixed.
+    """
+    for y, left, right in _platforms(bay.placements):
+        row = sorted((p for p in bay.placements if p.package.kind == 'loose'
+                      and p.y_mm == y and left <= p.x_mm and p.right <= right
+                      and _placement_support(p, bay.placements)[0] == 'supported top'),
+                     key=lambda p: p.x_mm)
+        groups = []
+        for p in row:
+            if groups and p.x_mm == groups[-1][-1].right:
+                groups[-1].append(p)
+            else:
+                groups.append([p])
+        for group in groups:
+            ids = {p.package.package_id for p in group}
+            start, end = group[0].x_mm, group[-1].right
+            top = max(p.top for p in group)
+            free_left, free_right = left, right
+            for other in bay.placements:
+                if other.package.package_id in ids or other.top <= y or other.y_mm >= top:
+                    continue
+                if other.right <= start:
+                    free_left = max(free_left, other.right)
+                if other.x_mm >= end:
+                    free_right = min(free_right, other.x_mm)
+            shift = (free_left + free_right - (end - start)) // 2 - start
+            trial = [Placement(p.package, p.x_mm + shift, p.y_mm)
+                     if p.package.package_id in ids else p for p in bay.placements]
+            if _validate_placements(trial):
+                bay.placements = trial
+    left = min(p.x_mm for p in bay.placements)
+    right = max(p.right for p in bay.placements)
+    shift = (TRUCK_WIDTH_MM - (right - left)) // 2 - left
+    trial = [Placement(p.package, p.x_mm + shift, p.y_mm) for p in bay.placements]
+    if _validate_placements(trial):
+        bay.placements = trial
+    _refresh_bay(bay)
+
+
+def _surface_unevenness(bays):
+    """Roof-height variance across occupied width, not a mass-balance calculation."""
+    variance = 0
+    for bay in bays:
+        edges = sorted({x for p in bay.placements for x in (p.x_mm, p.right)})
+        strips = [(right - left, max((p.top for p in bay.placements
+                                    if p.x_mm < right and p.right > left), default=0))
+                  for left, right in zip(edges, edges[1:])]
+        width = edges[-1] - edges[0]
+        mean = sum(w * h for w, h in strips) / width
+        variance += sum(w * (h - mean) ** 2 for w, h in strips) / width
+    return variance
+
+
+def _place_loose_packages(bays, loose_packages, mode, prefer_top=True):
     for package in _sort_packages(loose_packages, mode):
         options = []
         for bi, bay in enumerate(bays):
@@ -973,10 +1044,11 @@ def _place_loose_packages(bays, loose_packages, mode):
                 if p.top > BAY_HEIGHT_MM:
                     continue
                 support = _placement_support(p, bay.placements)[0]
-                score = (0 if support == 'deck' else 1,
-                         max(bay.used_height_mm, p.top) - bay.used_height_mm,
-                         1 if support.startswith('supported top') else 0,
-                         p.y_mm, p.x_mm)
+                rank = 0 if support == 'supported top' else (2 if support == 'deck' else 1)
+                height_gain = max(bay.used_height_mm, p.top) - bay.used_height_mm
+                # Try compact placement too: a preference must not force more bays
+                # when an alternate shelf/deck arrangement fits the same order.
+                score = ((rank, height_gain) if prefer_top else (height_gain, rank)) + (p.y_mm, p.x_mm)
                 options.append((score, bi, p))
         if options:
             _, bi, p = min(options, key=lambda v: v[0])
@@ -1029,24 +1101,30 @@ def pack_packages(packages):
     loose_packages = [p for p in packages if p.kind == 'loose']
     if not bundle_packages and any(p.size != 750 for p in loose_packages):
         raise ValueError('Only loose outer pipe remains, with no full-pack support. '
-                         'Only loose 750 may sit directly on the deck. Other sizes need a supported pack shelf.')
+                         'Only loose 750 may sit directly on the deck. Other sizes need a supported pack top or shelf.')
     candidates, seen = [], set()
 
     def evaluate(bays, label, mode):
-        key = tuple(tuple((p.package.package_id, p.x_mm, p.y_mm) for p in b.placements) for b in bays)
+        key = (mode, tuple(tuple((p.package.package_id, p.x_mm, p.y_mm) for p in b.placements) for b in bays))
         if key in seen:
             return
         seen.add(key)
-        if not _place_loose_packages(bays, loose_packages, mode):
-            return
-        if any(not _validate_placements(b.placements) for b in bays):
-            return
-        # Capacity first; then favour larger packages lower down, and lower height.
-        inversions = sum(max(0, p.package.size - q.package.size)
-                         for b in bays for p in b.placements for q in b.placements
-                         if p.y_mm == q.top and p.x_mm < q.right and q.x_mm < p.right)
-        candidates.append(((len(bays), inversions, max((b.used_height_mm for b in bays), default=0),
-                            sum(b.used_height_mm for b in bays)), bays, label))
+        for prefer_top in (True, False):
+            trial = [Bay(list(b.layers), b.used_height_mm, list(b.placements)) for b in bays]
+            if not _place_loose_packages(trial, loose_packages, mode, prefer_top):
+                continue
+            # Bay count first. Loose top rows take priority over pack ordering
+            # and height; a larger loose pipe may sit on a smaller full pack.
+            inversions = sum(max(0, p.package.size - q.package.size)
+                             for b in trial for p in b.placements for q in b.placements
+                             if p.package.kind == q.package.kind == 'bundle'
+                             and p.y_mm == q.top and p.x_mm < q.right and q.x_mm < p.right)
+            # Prefer low, level arrangements before the old largest-pack-lowest
+            # tie-break. This favours side-by-side foundations over tall columns.
+            candidates.append(((len(trial), *_loose_layout_penalty(trial),
+                                max((b.used_height_mm for b in trial), default=0),
+                                sum(b.used_height_mm for b in trial),
+                                _surface_unevenness(trial), inversions), trial, label))
 
     for mode in ('height', 'width', 'area', 'size'):
         for level_only in (False, True):
@@ -1071,9 +1149,11 @@ def pack_packages(packages):
         evaluate(_greedy_bundle_bays(bundle_packages, mode), f'footprints/{mode}', mode)
     if not candidates:
         raise ValueError('No supported plan found with the current pack dimensions. '
-                         'Loose pipe needs its full diameter on a pack shelf; two-high loose stacks '
+                         'Loose pipe needs its full diameter on a pack top or shelf; two-high loose stacks '
                          'require a shelf beside an upper pack. Only loose 750 may use the deck.')
     _, bays, label = min(candidates, key=lambda c: c[0])
+    for bay in bays:
+        _centre_bay(bay)
     return bays, label
 
 
@@ -1290,6 +1370,35 @@ def _geometry_notes(bay):
                          f'If {levels} socket envelope(s) of {master["socket_od_mm"]} mm align vertically, '
                          f'the column could reach {envelope} mm, above the {BAY_HEIGHT_MM} mm limit. '
                          'Confirm the actual pipe orientation, bearing surface and dunnage.')
+    # A nominal body fit can still be too narrow when adjacent sockets align.
+    # Check each contiguous row against its actual exposed support interval.
+    for y, left, right in _platforms(bay.placements or []):
+        row = sorted((p for p in bay.placements if p.package.kind == 'loose'
+                      and p.y_mm == y and left <= p.x_mm and p.right <= right),
+                     key=lambda p: p.x_mm)
+        groups = []
+        for p in row:
+            if groups and p.x_mm <= groups[-1][-1].right:
+                groups[-1].append(p)
+            else:
+                groups.append([p])
+        for group in groups:
+            span_left, span_right = left, right
+            top = max(p.top for p in group)
+            for other in bay.placements:
+                if other in group or other.y_mm >= top or other.top <= y:
+                    continue
+                if other.right <= group[0].x_mm:
+                    span_left = max(span_left, other.right)
+                if other.x_mm >= group[-1].right:
+                    span_right = min(span_right, other.x_mm)
+            socket_width = sum(PIPE_MASTER[p.package.size]['socket_od_mm'] for p in group)
+            if socket_width > span_right - span_left:
+                names = ' + '.join(p.package.package_id for p in group)
+                notes.append(f'Measure before loading: {names} has {span_right - span_left} mm '
+                             f'of supported width at base {y} mm. Aligned sockets need '
+                             f'{socket_width} mm. Confirm socket staggering/orientation and '
+                             'the actual bearing surface; the body-diameter fit alone is not sufficient.')
     return notes
 
 
@@ -1373,7 +1482,9 @@ def _pack_with_foundation_choices(chains):
         except ValueError as exc:
             failure = exc
             continue
-        score = (len(bays), len(variant), max((b.used_height_mm for b in bays), default=0))
+        score = (len(bays), len(variant), *_loose_layout_penalty(bays),
+                 max((b.used_height_mm for b in bays), default=0),
+                 sum(b.used_height_mm for b in bays), _surface_unevenness(bays))
         if best is None or score < best[0]:
             best = (score, variant, packages, possible, retained, bays, mode)
         if len(bays) <= 1 and variant is chains:
@@ -1429,7 +1540,7 @@ def plan_order(
             pass
 
     result = {
-        "engine_version": "1.3",
+        "engine_version": "1.5",
         "status": "PROTOTYPE - PHYSICAL VALIDATION REQUIRED",
         "input_order": dict(sorted(clean_order.items())),
         "summary": {
@@ -1462,12 +1573,13 @@ def plan_order(
             "450 -> 525 is explicitly prohibited.",
             "Payload and axle limits are not enforced until truck payload data is supplied.",
             "Multi-truck recommendation requires freight rates before the cheapest mix can be selected.",
-            "Loose 750 may use the deck. Other loose pipe requires an exposed full-pack shelf beside an upper pack.",
+            "Loose pipe is preferably placed in one row on supported pack tops for strapping to the pack before loading. Supported side shelves and the loose-750 deck option are fallbacks.",
             "Every full pack must be fully supported by coplanar pack footprints or the deck; empty gaps and loose pipe cannot support packs.",
             "Mixed-height packs cannot be bridged by an upper pack. Independent supported columns are checked separately.",
             "600 mm bundle planning height is set to 751 mm so no bay can stack four 600 packs.",
             "Usable load height is capped at 2800 mm to allow for a 1500 mm truck deck within a 4300 mm overall planning height.",
-            "Shelf stacking is limited to two loose pipes of the same size, beside an upper pack. Loose pipe is not added to the topmost pack surface.",
+            "Low, level pack arrangements are preferred; top loose rows and the overall bay footprint are centred within their available support and deck width.",
+            "Top loose pipe is limited to one row with its full diameter supported. Two-high loose stacks remain limited to supported shelves beside an upper pack.",
         ],
     }
 
@@ -1512,7 +1624,7 @@ def parse_order(text: str) -> Dict[int, int]:
 def pretty_summary(result: Dict) -> str:
     s = result["summary"]
     lines = [
-        "PLASGAIN PIPE LOAD PLANNER v1.3",
+        "PLASGAIN PIPE LOAD PLANNER v1.5",
         "=" * 36,
         f"Order: {result['input_order']}",
         f"Total pipes: {s['total_pipes']}",
@@ -1596,7 +1708,6 @@ def main():
 
 
 # Browser build: command-line entry point intentionally disabled.
-
 </script>
 <script>
 const PIPE_MASTER = {
@@ -1746,9 +1857,10 @@ function packageBrief(p){
 
 const LOADING_NOTES=[
   'Weights shown are estimated pipe-product weights only; confirm vehicle payload, axle distribution and dunnage/restraint weight separately.',
+  'Prefer level side-by-side pack foundations where shown. Loose top rows are centred over their available support; the complete load footprint is centred across the deck.',
   'Full packs need continuous, level full-pack support across their entire footprint. Do not bridge empty gaps or unequal pack heights.',
-  'Loose pipe needs exposed pack shelf width at least equal to its outside diameter, beside an upper pack. Maximum two pipes high; full packs must not rest on loose pipe.',
-  'Loose 750 may sit directly on the deck. Other loose sizes must use the supported shelves shown. No loose pipe is added on the topmost pack surface.',
+  'Loose pipe is placed on supported pack tops first, in one row, so it can be strapped to the pack before loading. Its full outside diameter must fit the supported width; full packs must not rest on loose pipe.',
+  'When top placement does not fit, use the supported side shelves shown, with a maximum of two loose pipes high. Loose 750 may use the deck as a fallback. Check the socket measurement notes before loading.',
   'Confirm actual pack bearing surfaces, outside/socket diameters, dunnage, final height, restraints and unloading sequence before dispatch.'
 ];
 function buildLoadingBrief(){
